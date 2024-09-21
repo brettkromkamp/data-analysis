@@ -88,6 +88,9 @@ def get_amazon_books_data(num_books, ti):
     # Remove duplicates based on 'Title' column
     df.drop_duplicates(subset="Title", inplace=True)
 
+    # Remove superfluous characters from the 'Price' column
+    df["Price"] = df["Price"].str.replace("$", "").str.replace(".", "")
+
     # Push the DataFrame to XCom
     ti.xcom_push(key="book_data", value=df.to_dict("records"))
 
@@ -131,7 +134,7 @@ default_args = {
 logger = logging.getLogger("airflow.task")
 # endregion
 
-# DAGs and pipeline
+# DAG and tasks
 dag = DAG(
     "fetch_and_load_amazon_data",
     default_args=default_args,
