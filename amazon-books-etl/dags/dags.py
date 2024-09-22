@@ -28,7 +28,7 @@ def get_amazon_books_data(num_books, ti):
     # ----- Extract -----
 
     # Base URL of the Amazon search results for data science books
-    base_url = f"https://www.amazon.com/s?k=data+engineering+books"
+    base_url = "https://www.amazon.com/s?k=data+engineering+books"
 
     books = []
     seen_titles = set()  # To keep track of seen titles
@@ -53,10 +53,11 @@ def get_amazon_books_data(num_books, ti):
             for book in book_containers:
                 title = book.find("span", {"class": "a-text-normal"})
                 author = book.find("a", {"class": "a-size-base"})
-                price = book.find("span", {"class": "a-price-whole"})
+                price_whole = book.find("span", {"class": "a-price-whole"})
+                price_fraction = book.find("span", {"class": "a-price-fraction"})
                 rating = book.find("span", {"class": "a-icon-alt"})
 
-                if title and author and price and rating:
+                if title and author and price_whole and price_fraction and rating:
                     book_title = title.text.strip()
 
                     # Check if title has been seen before
@@ -66,7 +67,8 @@ def get_amazon_books_data(num_books, ti):
                             {
                                 "Title": book_title,
                                 "Author": author.text.strip(),
-                                "Price": price.text.strip(),
+                                "Price": price_whole.text.strip()
+                                + price_fraction.text.strip(),  # Decimal point is already included
                                 "Rating": rating.text.strip(),
                             }
                         )
@@ -89,7 +91,7 @@ def get_amazon_books_data(num_books, ti):
     df.drop_duplicates(subset="Title", inplace=True)
 
     # Remove superfluous characters from the 'Price' column
-    df["Price"] = df["Price"].str.replace("$", "").str.replace(".", "")
+    # df["Price"] = df["Price"].str.replace("$", "").str.replace(".", "")
 
     # Push the DataFrame to XCom
     ti.xcom_push(key="book_data", value=df.to_dict("records"))
@@ -147,7 +149,7 @@ dag = DAG(
 fetch_books_data_task = PythonOperator(
     task_id="fetch_books_data",
     python_callable=get_amazon_books_data,
-    op_args=[50],  # Number of books to fetch
+    op_kwargs={"num_books": 50},
     dag=dag,
 )
 create_books_table_task = PostgresOperator(
