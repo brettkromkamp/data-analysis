@@ -18,6 +18,7 @@ import pandas as pd
 import requests
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from bs4 import BeautifulSoup
@@ -146,33 +147,43 @@ dag = DAG(
 
 # Tasks
 
-fetch_books_data_task = PythonOperator(
-    task_id="fetch_books_data",
-    python_callable=get_amazon_books_data,
-    op_kwargs={"num_books": 50},
-    dag=dag,
-)
-create_books_table_task = PostgresOperator(
-    task_id="create_books_table",
-    postgres_conn_id="amazon_books",
-    sql="""
-    CREATE TABLE IF NOT EXISTS books (
-        id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
-        authors TEXT,
-        price TEXT,
-        rating TEXT
-    );
-    """,
-    dag=dag,
-)
-insert_books_data_task = PythonOperator(
-    task_id="insert_books_data",
-    python_callable=insert_amazon_books_data,
+# fetch_books_data_task = PythonOperator(
+#     task_id="fetch_books_data",
+#     python_callable=get_amazon_books_data,
+#     op_kwargs={"num_books": 50},
+#     dag=dag,
+# )
+
+# create_books_table_task = PostgresOperator(
+#     task_id="create_books_table",
+#     postgres_conn_id="amazon_books",
+#     sql="""
+#     CREATE TABLE IF NOT EXISTS books (
+#         id SERIAL PRIMARY KEY,
+#         title TEXT NOT NULL,
+#         authors TEXT,
+#         price TEXT,
+#         rating TEXT
+#     );
+#     """,
+#     dag=dag,
+# )
+
+# insert_books_data_task = PythonOperator(
+#     task_id="insert_books_data",
+#     python_callable=insert_amazon_books_data,
+#     dag=dag,
+# )
+
+transform_persons_task = SparkSubmitOperator(
+    task_id="transform_persons",
+    conn_id="spark_default",
+    application="jobs/transform_persons.py",
     dag=dag,
 )
 
 # Dependency graph
-fetch_books_data_task >> create_books_table_task >> insert_books_data_task
+# fetch_books_data_task >> create_books_table_task >> insert_books_data_task >> transform_persons_task
+transform_persons_task
 
 # endregion
