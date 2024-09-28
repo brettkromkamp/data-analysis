@@ -7,6 +7,7 @@
 #   Operators
 #       1. PythonOperator
 #       2. PostgresOperator
+#       3. SparkSubmitOperator
 #   Hooks
 #       1. PostgresHook
 #   Dependencies
@@ -129,7 +130,7 @@ headers = {
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2024, 9, 21),
+    "start_date": datetime(2024, 9, 27),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
@@ -147,34 +148,6 @@ dag = DAG(
 
 # Tasks
 
-# fetch_books_data_task = PythonOperator(
-#     task_id="fetch_books_data",
-#     python_callable=get_amazon_books_data,
-#     op_kwargs={"num_books": 50},
-#     dag=dag,
-# )
-
-# create_books_table_task = PostgresOperator(
-#     task_id="create_books_table",
-#     postgres_conn_id="amazon_books",
-#     sql="""
-#     CREATE TABLE IF NOT EXISTS books (
-#         id SERIAL PRIMARY KEY,
-#         title TEXT NOT NULL,
-#         authors TEXT,
-#         price TEXT,
-#         rating TEXT
-#     );
-#     """,
-#     dag=dag,
-# )
-
-# insert_books_data_task = PythonOperator(
-#     task_id="insert_books_data",
-#     python_callable=insert_amazon_books_data,
-#     dag=dag,
-# )
-
 transform_persons_task = SparkSubmitOperator(
     task_id="transform_persons",
     conn_id="spark_default",
@@ -182,8 +155,35 @@ transform_persons_task = SparkSubmitOperator(
     dag=dag,
 )
 
+fetch_books_data_task = PythonOperator(
+    task_id="fetch_books_data",
+    python_callable=get_amazon_books_data,
+    op_kwargs={"num_books": 50},
+    dag=dag,
+)
+
+create_books_table_task = PostgresOperator(
+    task_id="create_books_table",
+    postgres_conn_id="amazon_books",
+    sql="""
+    CREATE TABLE IF NOT EXISTS books (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        authors TEXT,
+        price TEXT,
+        rating TEXT
+    );
+    """,
+    dag=dag,
+)
+
+insert_books_data_task = PythonOperator(
+    task_id="insert_books_data",
+    python_callable=insert_amazon_books_data,
+    dag=dag,
+)
+
 # Dependency graph
-# fetch_books_data_task >> create_books_table_task >> insert_books_data_task >> transform_persons_task
-transform_persons_task
+transform_persons_task >> fetch_books_data_task >> create_books_table_task >> insert_books_data_task
 
 # endregion

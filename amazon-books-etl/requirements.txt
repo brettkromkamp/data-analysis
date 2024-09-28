@@ -1,0 +1,6 @@
+pandas
+beautifulsoup4
+requests
+apache-airflow==2.10.2
+apache-airflow-providers-apache-spark
+apache-airflow-providers-postgres
